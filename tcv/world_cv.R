@@ -171,7 +171,7 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
   # merge_tbl <- jhu_Daily
   # case_tbl <- jhu_cases_daily
   # collated_data <- jhu_Daily_Performance
-  # i = 1
+  # i = 20
   
   for (i in c(1: (ncol(case_tbl )-1))){ 
   
@@ -191,8 +191,9 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
         recovered = .[[4]], 
         new_recovered =0
       )%>%
-      select(-names(.)[2:4]) #cut temporary
-    
+      select(Country, date:new_recovered)
+      # select(-names(.)[2:4]) #cut temporary
+      
     #New country report
     new_country <- new_data%>%
       filter(!Country %in% collated_data$Country)%>%
