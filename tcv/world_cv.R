@@ -167,7 +167,7 @@ jhu_Monthly <- merge(jhu_cases_monthly, jhu_deaths_monthly, jhu_rec_monthly )%>%
 #Create Collated Table
 data_collect <- function(merge_tbl, case_tbl, collated_data){
   
-  ##For Test
+  #For Test
   # merge_tbl <- jhu_Daily
   # case_tbl <- jhu_cases_daily
   # collated_data <- jhu_Daily_Performance
@@ -183,7 +183,7 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
       mutate(
         # date = as_datetime(str_replace(names(.)[2], ".x", ""), tz = "UTC", format = NULL),
         # date = lubridate::ymd(names(.)[4], tz = "UTC"),
-        date = as.POSIXct(y, format = "%y-%m-%d"),
+        date = ymd(names(.)[4]),
         update = max(collated_data$update)+1,
         cases = .[[2]],
         new_cases = 0,
