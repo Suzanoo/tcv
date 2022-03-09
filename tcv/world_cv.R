@@ -168,10 +168,10 @@ jhu_Monthly <- merge(jhu_cases_monthly, jhu_deaths_monthly, jhu_rec_monthly )%>%
 data_collect <- function(merge_tbl, case_tbl, collated_data){
   
   ##For Test
-  merge_tbl <- jhu_Daily
-  case_tbl <- jhu_cases_daily
-  collated_data <- jhu_Daily_Performance
-  i = 1
+  # merge_tbl <- jhu_Daily
+  # case_tbl <- jhu_cases_daily
+  # collated_data <- jhu_Daily_Performance
+  # i = 1
   
   for (i in c(1: (ncol(case_tbl )-1))){ 
   
@@ -182,7 +182,7 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
       filter(.[[2]] > 0 | .[[3]] > 0 )%>%# cut zero cases
       mutate(
         # date = as_datetime(str_replace(names(.)[2], ".x", ""), tz = "UTC", format = NULL),
-        date = ymd(names(.)[4], tz = "UTC"),
+        date = lubridate::ymd(names(.)[4], tz = "UTC"),
         update = max(collated_data$update)+1,
         cases = .[[2]],
         new_cases = 0,
@@ -250,7 +250,6 @@ jhu_Daily <- neg_clean(jhu_Daily)
 jhu_Weekly <- neg_clean(jhu_Weekly)
 jhu_Monthly <- neg_clean(jhu_Monthly)
 
-#
 final <- function(tbl){
   #set new names
   names(tbl) <- c("jhu_ID", "date", "update", "cases", "new_cases",
