@@ -163,7 +163,6 @@ jhu_Monthly <- merge(jhu_cases_monthly, jhu_deaths_monthly, jhu_rec_monthly )%>%
 
 #--------------------------------------------------------------------
 ## Re-organize table
-
 #Create Collated Table
 data_collect <- function(merge_tbl, case_tbl, collated_data){
   
@@ -171,28 +170,31 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
   # merge_tbl <- jhu_Daily
   # case_tbl <- jhu_cases_daily
   # collated_data <- jhu_Daily_Performance
-  # i = 20
+  # i = 4
   
   for (i in c(1: (ncol(case_tbl )-1))){ 
   
     #create placeholder df
     new_data <- merge_tbl%>%
       select(1, i+1, i+ncol(case_tbl), i-1 +2*ncol(case_tbl ))%>% #select column match date for temporary
-      as_tibble()%>%
-      filter(.[[2]] > 0 | .[[3]] > 0 )%>%# cut zero cases
+      as_tibble()
+    date <- as.Date(names(new_data)[4], "%Y-%m-%d")
+    
+    names(new_data) <- c('Country', 'Dcase', 'Ddeath', 'Drec')
+    new_data <- new_data%>%
+      filter(Dcase > 0 | Ddeath > 0 )%>%# cut zero cases
+      #filter((.[[2]] > 0) | (.[[3]] > 0) )%>%# cut zero cases
       mutate(
-        # date = as_datetime(str_replace(names(.)[2], ".x", ""), tz = "UTC", format = NULL),
-        # date = lubridate::ymd(names(.)[4], tz = "UTC"),
-        date = ymd(names(.)[4]),
+        date = date,
         update = max(collated_data$update)+1,
-        cases = .[[2]],
+        cases = Dcase,
         new_cases = 0,
-        deaths = .[[3]],
+        deaths = Ddeath,
         new_deaths = 0,
-        recovered = .[[4]], 
+        recovered = Drec, 
         new_recovered =0
       )%>%
-      select(Country, date:new_recovered)
+      dplyr::select(Country, date:new_recovered)
       # select(-names(.)[2:4]) #cut temporary
       
     #New country report
@@ -209,11 +211,12 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
       filter(Country %in% collated_data$Country)
     
     #Pull last report of ever recorded country 
+    Umax = max(collated_data$update)
     last_report <- collated_data%>%
       filter(Country %in% old_country$Country)%>%
       arrange(Country, cases)%>%
-      # filter(update == max(update))
-      filter(max(update))
+      filter(update == Umax)
+      # filter(max(update))
     
     #Calculate new_... for ever recorded country && finally merge all
     collated_data <- old_country%>%

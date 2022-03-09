@@ -14,7 +14,7 @@ pop <- readr::read_csv("data/thai_population_2020.csv") %>%
   as_tibble()%>%
   na.omit()%>%
   mutate(ADM1_PCODE= str_to_upper(ADM1_Pcode))%>%
-  select(ADM1_PCODE, 8)
+  select(ADM1_PCODE, Both_TOTAL)
 
 
 
@@ -30,7 +30,9 @@ province_daily2 <- jsonlite::fromJSON("https://covid19.ddc.moph.go.th/api/Cases/
   filter(total_case == max(total_case)) %>% 
   filter(!duplicated(ADM1_TH)) %>% 
   ungroup() %>%
-  select(-3, -4, -7, -8, -11)
+  select(-c("txn_date", "province", "new_case_excludeabroad", "total_case_excludeabroad", "update_date"))
+  # select(-3, -4, -7, -8, -11)
+
 
 ## Function for pre-processing
 # add counter(column = update) to data
