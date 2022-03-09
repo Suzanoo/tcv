@@ -182,7 +182,8 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
       filter(.[[2]] > 0 | .[[3]] > 0 )%>%# cut zero cases
       mutate(
         # date = as_datetime(str_replace(names(.)[2], ".x", ""), tz = "UTC", format = NULL),
-        date = lubridate::ymd(names(.)[4], tz = "UTC"),
+        # date = lubridate::ymd(names(.)[4], tz = "UTC"),
+        date = as.POSIXct(y, format = "%y-%m-%d"),
         update = max(collated_data$update)+1,
         cases = .[[2]],
         new_cases = 0,
@@ -211,7 +212,8 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
     last_report <- collated_data%>%
       filter(Country %in% old_country$Country)%>%
       arrange(Country, cases)%>%
-      filter(update == max(update))
+      # filter(update == max(update))
+      filter(max(update))
     
     #Calculate new_... for ever recorded country && finally merge all
     collated_data <- old_country%>%
