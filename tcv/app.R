@@ -78,8 +78,8 @@ country_coor <- read.csv("data/countries_codes_and_coordinates.csv") %>% na.omit
 # add coordinate into map 
 thai <- thai %>%
   left_join(coor %>%
-              select(3:5), by = "ADM1_PCODE")%>%
-  select(3:5, 18, 19)
+              select(c(3, 4, 5)), by = "ADM1_PCODE")%>%
+  select(c(3:5, 18, 19))
 
 min_date <- min(province_daily$date)
 max_date <- max(province_daily$date)
@@ -427,7 +427,7 @@ server <- function(input, output, session) {
       filter(date == max(date)) %>%
       select(-last_update) %>%
       left_join(country_coor %>%
-                  select( 6, 7, 10), by = "jhu_ID")
+                  select(c( 6, 7, 10)), by = "jhu_ID")
     
     data %>%
       leaflet() %>%
@@ -456,7 +456,7 @@ server <- function(input, output, session) {
     world_daily %>%
       mutate(date = as_date(date),
              global_level = "global") %>%
-      select(2, 4:7, global_level) %>%
+      select(c(2, 4:7), global_level) %>%
       group_by(global_level, date) %>%
       summarise(across(where(is.numeric), sum), .groups = "drop") %>%
       as_data_frame() %>%

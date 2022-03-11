@@ -67,7 +67,7 @@ new_report <- which(names(jhu_cases %>%
 ##Group data to daily, weekly and monthly case
 jhu_cases_daily <- jhu_cases%>%
   as_tibble() %>%
-  select(1:4, new_report + 4) %>% # select only new report (diff from archived)
+  select(c(1:4), new_report + 4)%>% # select only new report (diff from archived)
   update_jhu()
 
 jhu_cases_weekly <- jhu_cases_daily%>%
@@ -85,7 +85,7 @@ jhu_deaths <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/
 
 jhu_deaths_daily <- jhu_deaths%>%
   as_tibble() %>%
-  select(1:4, new_report+4) %>% # select only new report (diff from archived)
+  select(c(1:4), new_report+4) %>% # select only new report (diff from archived)
   update_jhu()
 
 jhu_deaths_weekly <- jhu_deaths_daily%>%
@@ -103,7 +103,7 @@ jhu_rec <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COV
 
 jhu_rec_daily <- jhu_rec%>%
   as_tibble() %>%
-  select(1:4, new_report+4) %>% # select only new report (diff from archived)
+  select(c(1:4), new_report+4) %>% # select only new report (diff from archived)
   update_jhu()
 
 jhu_rec_weekly <- jhu_rec_daily%>%
@@ -176,7 +176,8 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
   
     #create placeholder df
     new_data <- merge_tbl%>%
-      select(1, i+1, i+ncol(case_tbl), i-1 +2*ncol(case_tbl ))%>% #select column match date for temporary
+      # select(1, i+1, i+ncol(case_tbl), i-1 +2*ncol(case_tbl ))%>%
+      select(c(1, i+1, i+ncol(case_tbl), i-1 +2*ncol(case_tbl )))%>%#select column match date for temporary
       as_tibble()
     date <- as.Date(names(new_data)[4], "%Y-%m-%d")
     
