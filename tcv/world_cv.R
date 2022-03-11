@@ -78,7 +78,12 @@ jhu_cases_weekly <- jhu_cases_daily%>%
   select(-week_day)
 
 jhu_cases_monthly <- jhu_cases_daily %>%
-  filter(date == days_in_month(date))
+  mutate(month = month(date)) %>%
+  relocate(month, .after = date) %>%
+  group_by(month) %>%
+  filter(date == max(date)) %>%
+  ungroup()%>%
+  select(-month)
 
 # Load latest Covid-2019 data: deaths cases
 jhu_deaths <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") 
@@ -96,7 +101,12 @@ jhu_deaths_weekly <- jhu_deaths_daily%>%
   select(-week_day)
 
 jhu_deaths_monthly <- jhu_deaths_daily %>%
-  filter(date == days_in_month(date))
+  mutate(month = month(date)) %>%
+  relocate(month, .after = date) %>%
+  group_by(month) %>%
+  filter(date == max(date)) %>%
+  ungroup()%>%
+  select(-month)
 
 # Load latest Covid-2019 data: recovered
 jhu_rec <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv",)
@@ -114,7 +124,12 @@ jhu_rec_weekly <- jhu_rec_daily%>%
   select(-week_day)
 
 jhu_rec_monthly <- jhu_rec_daily %>%
-  filter(date == days_in_month(date))
+  mutate(month = month(date)) %>%
+  relocate(month, .after = date) %>%
+  group_by(month) %>%
+  filter(date == max(date)) %>%
+  ungroup()%>%
+  select(-month)
 
 # Create function for transpose table 
 flip <- function(tbl){
@@ -165,19 +180,17 @@ jhu_Monthly <- merge(jhu_cases_monthly, jhu_deaths_monthly, jhu_rec_monthly )%>%
 ## Re-organize table
 #Create Collated Table
 data_collect <- function(merge_tbl, case_tbl, collated_data){
-  
   #For Test
-  # merge_tbl <- jhu_Daily
-  # case_tbl <- jhu_cases_daily
-  # collated_data <- jhu_Daily_Performance
-  # i = 4
-  
-  for (i in c(1: (ncol(case_tbl )-1))){ 
-  
+  # merge_tbl <- jhu_Monthly
+  # case_tbl <- jhu_cases_monthly
+  # collated_data <- jhu_Monthly_Performance
+  # i <- 1
+  x <- ncol(case_tbl)-1
+  for (i in c(1: x)){ 
+    
     #create placeholder df
     new_data <- merge_tbl%>%
-      # select(1, i+1, i+ncol(case_tbl), i-1 +2*ncol(case_tbl ))%>%
-      select(c(1, i+1, i+ncol(case_tbl), i-1 +2*ncol(case_tbl )))%>%#select column match date for temporary
+      select(c(1, i+1, i+x+1, i+2*x+1))%>% #select column match
       as_tibble()
     date <- as.Date(names(new_data)[4], "%Y-%m-%d")
     
@@ -195,7 +208,7 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
         recovered = Drec, 
         new_recovered =0
       )%>%
-      dplyr::select(Country, date:new_recovered)
+      select(Country, date:new_recovered)
       # select(-names(.)[2:4]) #cut temporary
       
     #New country report
@@ -232,13 +245,10 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
   }#for loop
   
   collated_data
-  
 }
 
 jhu_Daily <- data_collect(jhu_Daily, jhu_cases_daily, jhu_Daily_Performance)
-
 jhu_Weekly <- data_collect(jhu_Weekly, jhu_cases_weekly, jhu_Weekly_Performance)
-
 jhu_Monthly <- data_collect(jhu_Monthly, jhu_cases_monthly, jhu_Monthly_Performance)
 
 #--------------------------------------------------------------------
