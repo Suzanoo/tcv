@@ -8,18 +8,7 @@
 
 # Thank you to Edward Parker and Quentic Leclerc.
 
-
 #########################################################################
-
-### Process below will start from 1-01-2022 (I used archived report for reduce processing)
-# If you want to start from first day report please comment out code at lowest part.
-
-## Load archived report : 22-01-2020 to 31-12-2021 
-jhu_Daily_Performance <- read_csv("performance/jhu_Daily_Performance.csv")
-jhu_Weekly_Performance <- read_csv("performance/jhu_Weekly_Performance.csv")
-jhu_Monthly_Performance <- read_csv("performance/jhu_Monthly_Performance.csv")
-
-
 # Function to update jhu input data according to mapping base format
 update_jhu <- function(input_df){
   names(input_df)[1:2] = c("Province", "Country")
@@ -54,84 +43,7 @@ update_jhu <- function(input_df){
   input_df
 }
 
-#--------------------------------------------------------------------
-# Load latest Covid-2019 data: confirmed cases from Johns Hopkins
-jhu_cases <-   readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") 
-
-# Check if there are new report (diff from archived data)
-new_report <- which(names(jhu_cases %>%
-          as_tibble() %>%
-          select(-c(1:4))) %>% 
-          mdy() > max(jhu_Daily_Performance$date)) 
-
-##Group data to daily, weekly and monthly case
-jhu_cases_daily <- jhu_cases%>%
-  as_tibble() %>%
-  select(c(1:4), new_report + 4)%>% # select only new report (diff from archived)
-  update_jhu()
-
-jhu_cases_weekly <- jhu_cases_daily%>%
-  mutate(
-    week_day = wday(date, label = TRUE)# added week day label for weekly report, select later
-  )%>%
-  filter(week_day == "Sun")%>%
-  select(-week_day)
-
-jhu_cases_monthly <- jhu_cases_daily %>%
-  mutate(month = month(date)) %>%
-  relocate(month, .after = date) %>%
-  group_by(month) %>%
-  filter(date == max(date)) %>%
-  ungroup()%>%
-  select(-month)
-
-# Load latest Covid-2019 data: deaths cases
-jhu_deaths <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") 
-
-jhu_deaths_daily <- jhu_deaths%>%
-  as_tibble() %>%
-  select(c(1:4), new_report+4) %>% # select only new report (diff from archived)
-  update_jhu()
-
-jhu_deaths_weekly <- jhu_deaths_daily%>%
-  mutate(
-    week_day = wday(date, label = TRUE)#added week day label for weekly report, select later
-  )%>%
-  filter(week_day == "Sun")%>%
-  select(-week_day)
-
-jhu_deaths_monthly <- jhu_deaths_daily %>%
-  mutate(month = month(date)) %>%
-  relocate(month, .after = date) %>%
-  group_by(month) %>%
-  filter(date == max(date)) %>%
-  ungroup()%>%
-  select(-month)
-
-# Load latest Covid-2019 data: recovered
-jhu_rec <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv",)
-
-jhu_rec_daily <- jhu_rec%>%
-  as_tibble() %>%
-  select(c(1:4), new_report+4) %>% # select only new report (diff from archived)
-  update_jhu()
-
-jhu_rec_weekly <- jhu_rec_daily%>%
-  mutate(
-    week_day = wday(date, label = TRUE)#added week day label for weekly report, select later
-  )%>%
-  filter(week_day == "Sun")%>%
-  select(-week_day)
-
-jhu_rec_monthly <- jhu_rec_daily %>%
-  mutate(month = month(date)) %>%
-  relocate(month, .after = date) %>%
-  group_by(month) %>%
-  filter(date == max(date)) %>%
-  ungroup()%>%
-  select(-month)
-
-# Create function for transpose table 
+##function for transpose table 
 flip <- function(tbl){
   tbl <- tbl%>%
     pivot_longer(-1) %>%
@@ -141,24 +53,7 @@ flip <- function(tbl){
   tbl
 }
 
-# Transpose all table
-jhu_cases_daily <- flip(jhu_cases_daily)
-jhu_cases_weekly <- flip(jhu_cases_weekly)
-jhu_cases_monthly <- flip(jhu_cases_monthly)
-
-jhu_deaths_daily <- flip(jhu_deaths_daily)
-jhu_deaths_weekly <- flip(jhu_deaths_weekly)
-jhu_deaths_monthly <- flip(jhu_deaths_monthly)
-
-jhu_rec_daily <- flip(jhu_rec_daily)
-jhu_rec_weekly <- flip(jhu_rec_weekly)
-jhu_rec_monthly <- flip(jhu_rec_monthly)
-
-##Country name in JHU report must be match country name in map file.
-# Process for clean
-# Load country data
-countries <- readr::read_csv("data/countries_codes_and_coordinates.csv")
-
+##merge 3 cases 
 merge <- function(cases, deaths, rec){
   jhu_merge <- cases%>%
     left_join(deaths, by='Country')%>%
@@ -167,18 +62,7 @@ merge <- function(cases, deaths, rec){
   jhu_merge
 }
 
-jhu_Daily <- merge(jhu_cases_daily, jhu_deaths_daily, jhu_rec_daily )%>%
-  filter(Country %in% countries$jhu_ID)
-
-jhu_Weekly <- merge(jhu_cases_weekly, jhu_deaths_weekly, jhu_rec_weekly )%>%
-  filter(Country %in% countries$jhu_ID)
-
-jhu_Monthly <- merge(jhu_cases_monthly, jhu_deaths_monthly, jhu_rec_monthly )%>%
-  filter(Country %in% countries$jhu_ID)
-
-#--------------------------------------------------------------------
-## Re-organize table
-#Create Collated Table
+## Re-pattern table
 data_collect <- function(merge_tbl, case_tbl, collated_data){
   #For Test
   # merge_tbl <- jhu_Monthly
@@ -209,8 +93,8 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
         new_recovered =0
       )%>%
       select(Country, date:new_recovered)
-      # select(-names(.)[2:4]) #cut temporary
-      
+    # select(-names(.)[2:4]) #cut temporary
+    
     #New country report
     new_country <- new_data%>%
       filter(!Country %in% collated_data$Country)%>%
@@ -230,7 +114,7 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
       filter(Country %in% old_country$Country)%>%
       arrange(Country, cases)%>%
       filter(update == Umax)
-      # filter(max(update))
+    # filter(max(update))
     
     #Calculate new_... for ever recorded country && finally merge all
     collated_data <- old_country%>%
@@ -247,12 +131,7 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
   collated_data
 }
 
-jhu_Daily <- data_collect(jhu_Daily, jhu_cases_daily, jhu_Daily_Performance)
-jhu_Weekly <- data_collect(jhu_Weekly, jhu_cases_weekly, jhu_Weekly_Performance)
-jhu_Monthly <- data_collect(jhu_Monthly, jhu_cases_monthly, jhu_Monthly_Performance)
-
-#--------------------------------------------------------------------
-# Clean negative value : new_cases < 0 , new_deaths < 0
+##Clean negative value
 neg_clean <- function(tbl){
   tbl <- tbl%>%
     mutate(
@@ -262,10 +141,6 @@ neg_clean <- function(tbl){
   
   tbl
 }
-
-jhu_Daily <- neg_clean(jhu_Daily)
-jhu_Weekly <- neg_clean(jhu_Weekly)
-jhu_Monthly <- neg_clean(jhu_Monthly)
 
 final <- function(tbl){
   #set new names
@@ -279,32 +154,156 @@ final <- function(tbl){
       last_update = NA)#added column
   
   tbl$last_update[nrow(tbl)] = paste(format(as.POSIXlt(Sys.time(), "GMT"), "%d %B %Y"))#update time stamp
-  
   tbl
 }
+#########################################################################
+##If you want to start from first day report please comment out code at lowest part.
 
-jhu_Daily <- final(jhu_Daily)
-jhu_Weekly <- final(jhu_Weekly)
-jhu_Monthly <- final(jhu_Monthly)         
+##In normal jhu_cases and  world_daily were read in app.R we can comment them
+# Load latest Covid-2019 data: confirmed cases from Johns Hopkins
+# jhu_cases <-   readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") 
+# world_daily <- readr::read_csv("data/world_Daily.csv") 
 
-#--------------------------------------------------------------------
-# save file
-#write.csv(collated_data, "input_data/coronavirus_full.csv", row.names=F)
-write.csv(jhu_Daily, "data/world_Daily.csv", row.names = FALSE)
-write.csv(jhu_Weekly, "data/world_Weekly.csv", row.names = FALSE)
-write.csv(jhu_Monthly, "data/world_Monthly.csv", row.names = FALSE)
+#last_report_date <- ymd('2022-03-01')
+last_report_date <- ymd(max(world_daily$date))
+new_report <- which(names(jhu_cases %>% #list of index of new report date [771, 772, 773,..]
+          as_tibble() %>%
+          select(-c(1:4))) %>% 
+          mdy() >last_report_date) 
 
-## If you want new archived report comment out below
-# write.csv(jhu_Daily %>% select(1:9), "performance/jhu_Daily_Performance.csv", row.names = FALSE)
-# write.csv(jhu_Weekly %>% select(1:9), "performance/jhu_Weekly_Performance.csv", row.names = FALSE)
-# write.csv(jhu_Monthly %>% select(1:9), "performance/jhu_Monthly_Performance.csv", row.names = FALSE)
-
-# Clear all 
-rm(list = ls())
-
-
-
-
+if((length(new_report) == 0)){
+  paste0('Data is up to date.No action Talk only!!!')
+}else{
+  paste0('There are new cases')
+  ##Group data to daily, weekly and monthly case
+  jhu_cases_daily <- jhu_cases%>%
+    as_tibble() %>%
+    select(c(1:4), new_report + 4)%>% # select only new report (diff from archived)
+    update_jhu()
+  
+  jhu_cases_weekly <- jhu_cases_daily%>%
+    mutate(
+      week_day = wday(date, label = TRUE)# added week day label for weekly report, select later
+    )%>%
+    filter(week_day == "Sun")%>%
+    select(-week_day)
+  
+  jhu_cases_monthly <- jhu_cases_daily %>%
+    mutate(month = month(date)) %>%
+    relocate(month, .after = date) %>%
+    group_by(month) %>%
+    filter(date == max(date)) %>%
+    ungroup()%>%
+    select(-month)
+  
+  # Load latest Covid-2019 data: deaths cases
+  jhu_deaths <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") 
+  
+  jhu_deaths_daily <- jhu_deaths%>%
+    as_tibble() %>%
+    select(c(1:4), new_report+4) %>% # select only new report (diff from archived)
+    update_jhu()
+  
+  jhu_deaths_weekly <- jhu_deaths_daily%>%
+    mutate(
+      week_day = wday(date, label = TRUE)#added week day label for weekly report, select later
+    )%>%
+    filter(week_day == "Sun")%>%
+    select(-week_day)
+  
+  jhu_deaths_monthly <- jhu_deaths_daily %>%
+    mutate(month = month(date)) %>%
+    relocate(month, .after = date) %>%
+    group_by(month) %>%
+    filter(date == max(date)) %>%
+    ungroup()%>%
+    select(-month)
+  
+  # Load latest Covid-2019 data: recovered
+  jhu_rec <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv",)
+  
+  jhu_rec_daily <- jhu_rec%>%
+    as_tibble() %>%
+    select(c(1:4), new_report+4) %>% # select only new report (diff from archived)
+    update_jhu()
+  
+  jhu_rec_weekly <- jhu_rec_daily%>%
+    mutate(
+      week_day = wday(date, label = TRUE)#added week day label for weekly report, select later
+    )%>%
+    filter(week_day == "Sun")%>%
+    select(-week_day)
+  
+  jhu_rec_monthly <- jhu_rec_daily %>%
+    mutate(month = month(date)) %>%
+    relocate(month, .after = date) %>%
+    group_by(month) %>%
+    filter(date == max(date)) %>%
+    ungroup()%>%
+    select(-month)
+  
+  # Transpose all table
+  jhu_cases_daily <- flip(jhu_cases_daily)
+  jhu_cases_weekly <- flip(jhu_cases_weekly)
+  jhu_cases_monthly <- flip(jhu_cases_monthly)
+  
+  jhu_deaths_daily <- flip(jhu_deaths_daily)
+  jhu_deaths_weekly <- flip(jhu_deaths_weekly)
+  jhu_deaths_monthly <- flip(jhu_deaths_monthly)
+  
+  jhu_rec_daily <- flip(jhu_rec_daily)
+  jhu_rec_weekly <- flip(jhu_rec_weekly)
+  jhu_rec_monthly <- flip(jhu_rec_monthly)
+  
+  ##Country name in JHU report must be match country name in map file.
+  # Process for clean
+  # Load country data
+  countries <- readr::read_csv("data/countries_codes_and_coordinates.csv")
+  
+  jhu_Daily <- merge(jhu_cases_daily, jhu_deaths_daily, jhu_rec_daily )%>%
+    filter(Country %in% countries$jhu_ID)
+  
+  jhu_Weekly <- merge(jhu_cases_weekly, jhu_deaths_weekly, jhu_rec_weekly )%>%
+    filter(Country %in% countries$jhu_ID)
+  
+  jhu_Monthly <- merge(jhu_cases_monthly, jhu_deaths_monthly, jhu_rec_monthly )%>%
+    filter(Country %in% countries$jhu_ID)
+  
+  #--------------------------------------------------------------------
+  #Organize table in pattern
+  world_weekly <- readr::read_csv("data/world_Weekly.csv")
+  world_monthly <- readr::read_csv("data/world_Monthly.csv")
+  
+  jhu_Daily <- data_collect(jhu_Daily, jhu_cases_daily, world_daily%>%select(-c(country, last_update)))
+  jhu_Weekly <- data_collect(jhu_Weekly, jhu_cases_weekly, world_weekly%>%select(-c(country, last_update)))
+  jhu_Monthly <- data_collect(jhu_Monthly, jhu_cases_monthly, world_monthly%>%select(-c(country, last_update)))
+  
+  #--------------------------------------------------------------------
+  # Clean negative value : new_cases < 0 , new_deaths < 0
+  jhu_Daily <- neg_clean(jhu_Daily)
+  jhu_Weekly <- neg_clean(jhu_Weekly)
+  jhu_Monthly <- neg_clean(jhu_Monthly)
+  
+  jhu_Daily <- final(jhu_Daily)
+  jhu_Weekly <- final(jhu_Weekly)
+  jhu_Monthly <- final(jhu_Monthly)         
+  
+  #--------------------------------------------------------------------
+  # save file
+  #write.csv(collated_data, "input_data/coronavirus_full.csv", row.names=F)
+  write.csv(jhu_Daily, "data/world_Daily.csv", row.names = FALSE)
+  write.csv(jhu_Weekly, "data/world_Weekly.csv", row.names = FALSE)
+  write.csv(jhu_Monthly, "data/world_Monthly.csv", row.names = FALSE)
+  
+  ## If you want new archived report comment out below
+  # write.csv(jhu_Daily %>% select(1:9), "performance/jhu_Daily_Performance.csv", row.names = FALSE)
+  # write.csv(jhu_Weekly %>% select(1:9), "performance/jhu_Weekly_Performance.csv", row.names = FALSE)
+  # write.csv(jhu_Monthly %>% select(1:9), "performance/jhu_Monthly_Performance.csv", row.names = FALSE)
+  
+  # Clear all 
+  rm(list = ls())
+  
+}
 
 #################################################################################################
 ### If you want start from first day of report used these code instead all above

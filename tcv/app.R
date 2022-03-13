@@ -26,7 +26,6 @@ library(shinyWidgets)
 
 #------------------------------------------------------------ 
 ## Data pre-processing
-
 ## Data from last archive 
 world_daily <- readr::read_csv("data/world_Daily.csv") 
 
@@ -35,6 +34,7 @@ jhu_cases <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/C
 
 ## Process if our archived data is not update with Johns Hopkins
 if (lubridate::mdy(last(names(jhu_cases))) != max(world_daily$date)) {
+  paste0("Ther are new cases")
   source("world_cv.R", local =TRUE)
   source("thai_cv.R", local =TRUE)
   
@@ -52,7 +52,8 @@ if (lubridate::mdy(last(names(jhu_cases))) != max(world_daily$date)) {
 
 ## Process if data is up to date  
 }else{
-  world_daily <- readr::read_csv("data/world_Daily.csv") 
+  paste0('Data is up to date.No action Talk only!!!')
+  # world_daily <- readr::read_csv("data/world_Daily.csv") 
   world_weekly <- readr::read_csv("data/world_Weekly.csv")
   world_monthly <- readr::read_csv("data/world_Monthly.csv")
   
