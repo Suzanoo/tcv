@@ -13,10 +13,7 @@ counter <- function(tbl){
 
 # Calculate accumulate for new_case and new_death for weekly, monthly
 accum_cal <- function(tbl, collated_data){
-  
-  # collated <- NULL #Placeholder table --> if not used archive data comment this line below
   collated <- collated_data
-  
   for (i in 1: length(unique(tbl$update))){
     
     last <- collated %>%
@@ -30,15 +27,14 @@ accum_cal <- function(tbl, collated_data){
     
     collated <- collated %>%
       bind_rows(present)
-    
   }
-  
   collated
 }
 
 #------------------------------------------------------------------------
 #Last report
-province_daily0 <- read_csv("data/province_daily.csv")
+province_daily0 <- read_csv("data/province_daily.csv")%>%
+  as_tibble()
 
 #Read data from source
 province_daily2 <- jsonlite::fromJSON("https://covid19.ddc.moph.go.th/api/Cases/timeline-cases-by-provinces") %>%
@@ -119,16 +115,19 @@ if (!length((new_report) > 0)){
   thai_daily <-province_daily%>%
     group_by(date) %>%
     summarise(across(where(is.numeric), sum)) %>%
+    ungroup()%>%
     select(-update)
   
   thai_weekly <- province_weekly %>%
     group_by(date) %>%
     summarise(across(where(is.numeric), sum)) %>%
+    ungroup()%>%
     select(-update)
   
   thai_monthly <- province_monthly %>%
     group_by(date) %>%
     summarise(across(where(is.numeric), sum)) %>%
+    ungroup()%>%
     select(-update)
   
   #check: plot --> provide specific case

@@ -65,20 +65,23 @@ merge <- function(cases, deaths, rec){
 ## Re-pattern table
 data_collect <- function(merge_tbl, case_tbl, collated_data){
   #For Test
-  # merge_tbl <- jhu_Monthly
-  # case_tbl <- jhu_cases_monthly
-  # collated_data <- jhu_Monthly_Performance
+  # merge_tbl <- jhu_Daily
+  # case_tbl <- jhu_cases_daily
+  # collated_data <- world_daily%>%select(-c(country, last_update))
   # i <- 1
+  
   x <- ncol(case_tbl)-1
+  names(collated_data) = c("Country", "date", "update", "cases", "new_cases", "deaths", "new_deaths", "recovered", "new_recovered")
+  
   for (i in c(1: x)){ 
-    
     #create placeholder df
     new_data <- merge_tbl%>%
       select(c(1, i+1, i+x+1, i+2*x+1))%>% #select column match
       as_tibble()
-    date <- as.Date(names(new_data)[4], "%Y-%m-%d")
     
+    date <- as.Date(names(new_data)[4], "%Y-%m-%d")
     names(new_data) <- c('Country', 'Dcase', 'Ddeath', 'Drec')
+    
     new_data <- new_data%>%
       filter(Dcase > 0 | Ddeath > 0 )%>%# cut zero cases
       #filter((.[[2]] > 0) | (.[[3]] > 0) )%>%# cut zero cases
@@ -112,9 +115,8 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
     Umax = max(collated_data$update)
     last_report <- collated_data%>%
       filter(Country %in% old_country$Country)%>%
-      arrange(Country, cases)%>%
+      arrange(Country, cases)%>% #sort
       filter(update == Umax)
-    # filter(max(update))
     
     #Calculate new_... for ever recorded country && finally merge all
     collated_data <- old_country%>%
@@ -161,15 +163,20 @@ final <- function(tbl){
 
 ##In normal jhu_cases and  world_daily were read in app.R we can comment them
 # Load latest Covid-2019 data: confirmed cases from Johns Hopkins
-# jhu_cases <-   readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") 
-# world_daily <- readr::read_csv("data/world_Daily.csv") 
+if(!exists(jhu_cases)){
+  jhu_cases <-   readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") 
+}
+
+if(!exists(world_daily)){
+  world_daily <- readr::read_csv("data/world_Daily.csv") 
+}
 
 #last_report_date <- ymd('2022-03-01')
 last_report_date <- ymd(max(world_daily$date))
 new_report <- which(names(jhu_cases %>% #list of index of new report date [771, 772, 773,..]
           as_tibble() %>%
-          select(-c(1:4))) %>% 
-          mdy() >last_report_date) 
+          select(-c(1:4))) %>% #delete first 4 index
+          mdy() >last_report_date) %>% +4L #add back
 
 if((length(new_report) == 0)){
   paste0('Data is up to date.No action Talk only!!!')
@@ -178,7 +185,7 @@ if((length(new_report) == 0)){
   ##Group data to daily, weekly and monthly case
   jhu_cases_daily <- jhu_cases%>%
     as_tibble() %>%
-    select(c(1:4), new_report + 4)%>% # select only new report (diff from archived)
+    select(c(1:4), new_report)%>% # select only new report (diff from archived)
     update_jhu()
   
   jhu_cases_weekly <- jhu_cases_daily%>%
@@ -201,7 +208,7 @@ if((length(new_report) == 0)){
   
   jhu_deaths_daily <- jhu_deaths%>%
     as_tibble() %>%
-    select(c(1:4), new_report+4) %>% # select only new report (diff from archived)
+    select(c(1:4), new_report) %>% # select only new report (diff from archived)
     update_jhu()
   
   jhu_deaths_weekly <- jhu_deaths_daily%>%
@@ -224,7 +231,7 @@ if((length(new_report) == 0)){
   
   jhu_rec_daily <- jhu_rec%>%
     as_tibble() %>%
-    select(c(1:4), new_report+4) %>% # select only new report (diff from archived)
+    select(c(1:4), new_report) %>% # select only new report (diff from archived)
     update_jhu()
   
   jhu_rec_weekly <- jhu_rec_daily%>%
@@ -290,15 +297,9 @@ if((length(new_report) == 0)){
   
   #--------------------------------------------------------------------
   # save file
-  #write.csv(collated_data, "input_data/coronavirus_full.csv", row.names=F)
   write.csv(jhu_Daily, "data/world_Daily.csv", row.names = FALSE)
   write.csv(jhu_Weekly, "data/world_Weekly.csv", row.names = FALSE)
   write.csv(jhu_Monthly, "data/world_Monthly.csv", row.names = FALSE)
-  
-  ## If you want new archived report comment out below
-  # write.csv(jhu_Daily %>% select(1:9), "performance/jhu_Daily_Performance.csv", row.names = FALSE)
-  # write.csv(jhu_Weekly %>% select(1:9), "performance/jhu_Weekly_Performance.csv", row.names = FALSE)
-  # write.csv(jhu_Monthly %>% select(1:9), "performance/jhu_Monthly_Performance.csv", row.names = FALSE)
   
   # Clear all 
   rm(list = ls())
