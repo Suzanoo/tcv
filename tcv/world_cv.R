@@ -65,10 +65,14 @@ merge <- function(cases, deaths, rec){
 ## Re-pattern table
 data_collect <- function(merge_tbl, case_tbl, collated_data){
   #For Test
-  # merge_tbl <- jhu_Daily
-  # case_tbl <- jhu_cases_daily
-  # collated_data <- world_daily%>%select(-c(country, last_update))
+  # merge_tbl <- jhu_Monthly
+  # case_tbl <- jhu_cases_monthly
+  # collated_data <- world_monthly%>%select(-c(country, last_update))
   # i <- 1
+  
+  # data_collect(jhu_Daily, jhu_cases_daily, world_daily%>%select(-c(country, last_update)))
+  # data_collect(jhu_Weekly, jhu_cases_weekly, world_weekly%>%select(-c(country, last_update)))
+  # data_collect(jhu_Monthly, jhu_cases_monthly, world_monthly%>%select(-c(country, last_update)))
   
   x <- ncol(case_tbl)-1
   names(collated_data) = c("Country", "date", "update", "cases", "new_cases", "deaths", "new_deaths", "recovered", "new_recovered")
@@ -76,8 +80,7 @@ data_collect <- function(merge_tbl, case_tbl, collated_data){
   for (i in c(1: x)){ 
     #create placeholder df
     new_data <- merge_tbl%>%
-      select(c(1, i+1, i+x+1, i+2*x+1))%>% #select column match
-      as_tibble()
+      select(c(1, i+1, i+x+1, i+2*x+1)) #select column match
     
     date <- as.Date(names(new_data)[4], "%Y-%m-%d")
     names(new_data) <- c('Country', 'Dcase', 'Ddeath', 'Drec')
@@ -163,11 +166,11 @@ final <- function(tbl){
 
 ##In normal jhu_cases and  world_daily were read in app.R we can comment them
 # Load latest Covid-2019 data: confirmed cases from Johns Hopkins
-if(!exists(jhu_cases)){
+if(!exists('jhu_cases')){
   jhu_cases <-   readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") 
 }
 
-if(!exists(world_daily)){
+if(!exists('world_daily')){
   world_daily <- readr::read_csv("data/world_Daily.csv") 
 }
 
@@ -185,13 +188,14 @@ if((length(new_report) == 0)){
   ##Group data to daily, weekly and monthly case
   jhu_cases_daily <- jhu_cases%>%
     as_tibble() %>%
-    select(c(1:4), new_report)%>% # select only new report (diff from archived)
+    select(1:4, new_report)%>% # select only new report (diff from archived)
     update_jhu()
   
   jhu_cases_weekly <- jhu_cases_daily%>%
     mutate(
       week_day = wday(date, label = TRUE)# added week day label for weekly report, select later
     )%>%
+    relocate(week_day, .after = date) %>%
     filter(week_day == "Sun")%>%
     select(-week_day)
   
@@ -215,6 +219,7 @@ if((length(new_report) == 0)){
     mutate(
       week_day = wday(date, label = TRUE)#added week day label for weekly report, select later
     )%>%
+    relocate(week_day, .after = date) %>%
     filter(week_day == "Sun")%>%
     select(-week_day)
   
@@ -238,6 +243,7 @@ if((length(new_report) == 0)){
     mutate(
       week_day = wday(date, label = TRUE)#added week day label for weekly report, select later
     )%>%
+    relocate(week_day, .after = date) %>%
     filter(week_day == "Sun")%>%
     select(-week_day)
   

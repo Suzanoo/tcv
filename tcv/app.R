@@ -32,8 +32,11 @@ world_daily <- readr::read_csv("data/world_Daily.csv")
 ## Update world report from Johns Hopkins
 jhu_cases <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") 
 
+jhu_date <- lubridate::mdy(last(names(jhu_cases)))
+last_report_date <- lubridate::ymd(max(world_daily$date))
+
 ## Process if our archived data is not update with Johns Hopkins
-if (lubridate::mdy(last(names(jhu_cases))) != max(world_daily$date)) {
+if (jhu_date != last_report_date) {
   paste0("Ther are new cases")
   source("world_cv.R", local =TRUE)
   source("thai_cv.R", local =TRUE)
