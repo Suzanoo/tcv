@@ -7,7 +7,6 @@ counter <- function(tbl){
     bind_cols(c(1:length((unique(tbl$date)))))%>% 
     set_names(c("date", "update"))%>%
     right_join(tbl, by = "date")
-  
   df
 }
 
@@ -31,14 +30,18 @@ accum_cal <- function(tbl, collated_data){
   collated
 }
 
+week_cal <- function(x){
+  x = as_integer(x)
+  dweek = 1+floor(x/7)
+  ifelse(dweek > 4, 4, dweek)
+}
+
 #------------------------------------------------------------------------
 #Last report
-province_daily0 <- read_csv("data/province_daily.csv")%>%
-  as_tibble()
+province_daily0 <- read_csv("data/province_daily.csv")
 
 #Read data from source
-province_daily2 <- jsonlite::fromJSON("https://covid19.ddc.moph.go.th/api/Cases/timeline-cases-by-provinces") %>%
-  as_tibble()
+province_daily2 <- jsonlite::fromJSON("https://covid19.ddc.moph.go.th/api/Cases/timeline-cases-by-provinces")
 
 last_report_date <- ymd(max(province_daily0$date))
 new_report <- province_daily2%>%
@@ -51,16 +54,10 @@ new_report <- province_daily2%>%
 if (!length((new_report) > 0)){
   paste0('Data is up to date.No action Talk only!!!')
 }else{
-  province_weekly0 <- read_csv("data/province_weekly.csv")
-  province_monthly0 <- read_csv("data/province_monthly.csv")
-  thai_daily0 <- read_csv("data/thai_daily.csv")
-  thai_weekly0 <- read_csv("data/thai_weekly.csv")
-  thai_monthly0 <- read_csv("data/thai_monthly.csv")
   province <- read_csv("data/province.csv")
   
   # # get population
   pop <- readr::read_csv("data/thai_population_2020.csv") %>%
-    as_tibble()%>%
     na.omit()%>%
     mutate(ADM1_PCODE= str_to_upper(ADM1_Pcode))%>%
     select(ADM1_PCODE, Both_TOTAL)
@@ -91,28 +88,42 @@ if (!length((new_report) > 0)){
     counter()%>%
     accum_cal(province_daily0)
   
-  # create province weekly cases
-  province_weekly <- province_daily%>%
-    filter(date > last_report_date) %>%
-    mutate(week_day = wday(date, label =TRUE))%>%
-    filter(week_day == "Sun")%>%
-    select(-week_day, -update)%>%
-    counter()%>%
-    accum_cal(province_weekly0)
+  province_weekly <- province_daily %>%
+    mutate(
+      year = year(date),
+      month = month(date),
+      day = mday(date),
+      week = week_cal(day),# calculated week of month label(1, 2, 3, 4)
+      week_day = wday(date, label = TRUE)# added week day label(Sun, Mon, Tue,...)
+    )%>%
+    group_by(ADM1_TH, year, month, week) %>%
+    # Calculate true accumulate 'new' cases 
+    mutate(
+      new_case = sum(new_case),
+      new_death = sum(new_death),
+    ) %>%
+    filter(day == max(day)) %>%
+    ungroup() %>%
+    select(-c(year, month, day, week, week_day))
   
-  # create province monthly cases
-  province_monthly <- province_daily%>%
-    filter(date > last_report_date) %>%
-    group_by(month = month(date), year = year(date))%>%
-    filter(date == max(date))%>%
-    arrange(date, ADM1_TH)%>%
-    ungroup()%>%
-    select(-month, -year, -update)%>%
-    counter()%>%
-    accum_cal(province_monthly0)
+  province_monthly <- province_daily %>%
+    mutate(
+      year = year(date),
+      month = month(date),
+      day = mday(date)) %>%
+    group_by(ADM1_TH, year, month) %>%
+    #Calculate true accumulate 'new' cases 
+    mutate(
+      new_case = sum(new_case),
+      new_death = sum(new_death),
+    ) %>%
+    filter(day == max(day)) %>% #we get day of month end and a present day
+    filter(day %in% c(28, 29, 30, 31)) %>% #cut present day
+    ungroup() %>%
+    select(-c(year, month, day))
   
   # create whole country
-  thai_daily <-province_daily%>%
+  thai_daily <- province_daily%>%
     group_by(date) %>%
     summarise(across(where(is.numeric), sum)) %>%
     ungroup()%>%
