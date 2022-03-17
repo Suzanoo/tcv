@@ -31,7 +31,6 @@ accum_cal <- function(tbl, collated_data){
 }
 
 week_cal <- function(x){
-  x = as_integer(x)
   dweek = 1+floor(x/7)
   ifelse(dweek > 4, 4, dweek)
 }
