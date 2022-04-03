@@ -170,6 +170,9 @@ if(!exists('world_daily')){
   world_daily <- readr::read_csv("data/world_Daily.csv") 
 }
 
+world_daily <- world_daily %>% 
+  filter(date < ymd('2022-03-16'))
+
 last_report_date<- ymd(max(world_daily$date))
 new_report <- which(names(jhu_cases %>% #list of index of new report date [771, 772, 773,..]
           as_tibble() %>%
@@ -184,21 +187,21 @@ if((length(new_report) == 0)){
   ##Group data to daily, weekly and monthly case
   jhu_cases_daily <- jhu_cases%>%
     as_tibble() %>%
-    select(1:4, new_report)%>% # select only new report indicated
+    select(c(1:4, new_report))%>% # select only new report indicated
     update_jhu()
   
   # Load latest Covid-2019 data: deaths cases
   jhu_deaths <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") 
   jhu_deaths_daily <- jhu_deaths%>%
     as_tibble() %>%
-    select(c(1:4), new_report) %>% # select only new report (diff from archived)
+    select(c(1:4, new_report)) %>% # select only new report (diff from archived)
     update_jhu()
   
   # Load latest Covid-2019 data: recovered
   jhu_rec <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv",)
   jhu_rec_daily <- jhu_rec%>%
     as_tibble() %>%
-    select(c(1:4), new_report) %>% # select only new report (diff from archived)
+    select(c(1:4, new_report)) %>% # select only new report (diff from archived)
     update_jhu()
   
   # Transpose all table

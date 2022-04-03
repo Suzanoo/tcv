@@ -9,8 +9,6 @@ Data extracted from Johns Hopkins data obtained from following Github repository
 And from Thailand Department of Disease Control:
 # https://covid19.ddc.moph.go.th/
 
-Thank you to Edward Parker and Quentic Leclerc.
-
 For daily report --> report at that day
 For weekly report --> report on Sunday of that week
 For monthly report --> report at end day of previous month
