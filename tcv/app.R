@@ -7,7 +7,7 @@
 ## data extracted from Johns Hopkins data obtained from following Github repository
 ## https://github.com/CSSEGISandData/COVID-19
 
-## And from Thailand Department of Disease Control: https://covid19.ddc.moph.go.th/
+## For Thailand pandemic data source from  Thailand Department of Disease Control: https://covid19.ddc.moph.go.th/
 
 library(shiny)
 library(tidyverse)
@@ -25,25 +25,30 @@ library(shinyjs)
 library(shinyWidgets)
 library(bslib)
 
+library(DBI)
+library(RPostgreSQL)
+
 ## to prevent cross over from old runs
 rm(list = ls(), envir = globalenv()) 
-
-source("vbox.R")
-source("sparkobj.R")
+useShinyjs()
 #------------------------------------------------------------ 
 ## Data pre-processing
-## Data from last archive 
 world_daily <- readr::read_csv("data/world_Daily.csv") 
 
 ## Update world report from Johns Hopkins
 jhu_cases <- readr::read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") 
 
+# get last report date
 jhu_date <- lubridate::mdy(last(names(jhu_cases)))
-last_report_date <- lubridate::ymd(max(world_daily$date))
+LAST_REPORT <- lubridate::ymd(max(world_daily$date))
 
-## Process if our archived data is not update with Johns Hopkins
-if (jhu_date != last_report_date) {
-  paste0("Ther are new cases")
+print(paste0("JHU Report :  ", jhu_date))
+print(paste0("World last Report :  ", LAST_REPORT))
+
+## Process if there are new cases from Johns Hopkins
+if (jhu_date != LAST_REPORT) {
+  print("Ther are new cases")
+  
   source("world_cv.R", local =TRUE)
   source("thai_cv.R", local =TRUE)
   
@@ -58,11 +63,12 @@ if (jhu_date != last_report_date) {
   thai_daily <-readr::read_csv("data/thai_daily.csv")
   thai_weekly <-readr::read_csv("data/thai_weekly.csv")
   thai_monthly <-readr::read_csv("data/thai_monthly.csv")
-
-## Process if data is up to date  
+  
+  
+  ## Process if data is up to date  
 }else{
-  paste0('Data is up to date.No action Talk only!!!')
-  # world_daily <- readr::read_csv("data/world_Daily.csv") 
+  print('Data is up to date. No action Talk only!!!')
+  world_daily <- readr::read_csv("data/world_Daily.csv") 
   world_weekly <- readr::read_csv("data/world_Weekly.csv")
   world_monthly <- readr::read_csv("data/world_Monthly.csv")
   
@@ -74,83 +80,82 @@ if (jhu_date != last_report_date) {
   thai_weekly <- readr::read_csv("data/thai_weekly.csv")
   thai_monthly <- readr::read_csv("data/thai_monthly.csv")
 }
-
-# get thai map
+#--------------------------------------------------------------------
+# get Thai map
+# single shapefile is composed of three mandatory files which are .shp, .shx and .dbf.
 # see basic geographic data analysis from the book "Geocomputer with R" authored by Ribin Lovelace, Jakub Nowosad and Jannes Muenchow
 # https://geocompr.robinlovelace.net/index.html
-thai <- sf::read_sf(dsn = "data/tha_adm_rtsd_itos_20190221_SHP_PART_1/tha_admbnda_adm1_rtsd_20190221.shp")%>%
-  rmapshaper::ms_simplify(keep = 0.25) #resize
 
-# read coordinate
-coor <- read.csv("data/province_coordinate.csv") #Thailand province coordinates
+# thai <- sf::read_sf(dsn = "data/tha_adm_rtsd_itos_20190221_SHP_PART_1/tha_admbnda_adm1_rtsd_20190221.shp")%>%
+#   rmapshaper::ms_simplify(keep = 0.25) #resize
+# 
+# # read coordinate
+# coor <- read.csv("data/province_coordinate.csv") #Thailand province coordinates
+# 
+# #World country coordinates 
+# country_coor <- read.csv("data/countries_codes_and_coordinates.csv") %>%
+#   na.omit()
 
-#World country coordinates 
+# # add coordinate into map 
+# thai <- thai %>%
+#   left_join(coor %>%
+#               select(c(3, 4, 5)), by = "ADM1_PCODE")%>%
+#   select(c(3:5, 18, 19))
+
+#https://community.rstudio.com/t/saving-shapefiles-with-r-that-can-be-re-read-as-a-shapefile/32644/4
+#> Linking to GEOS 3.6.1, GDAL 2.1.3, PROJ 4.9.3
+# write_rds(thai, file = "data/thai.rds", compress = "xz")
+#--------------------------------------------------------------------
 country_coor <- read.csv("data/countries_codes_and_coordinates.csv") %>% 
   na.omit()
 
-# add coordinate into map 
-thai <- thai %>%
-  left_join(coor %>%
-              select(c(3, 4, 5)), by = "ADM1_PCODE")%>%
-  select(c(3:5, 18, 19))
+thai <- read_rds("data/thai.rds")
 
 min_date <- min(province_daily$date)
 max_date <- max(province_daily$date)
 
-#------------------------------------------------------------ 
-#create ui 
 #source('ui.R') #Desktop version
 source('ui2.R') #Mobile
-
-#------------------------------------------------------------
+source("vbox.R")
+source("sparkobj.R")
+#--------------------------------------------------------------------
 server <- function(input, output, session) {
   
-  # addClass(selector = "body", class = "sidebar-collapse")
-  # 
-  # # Reset Button
-  # # Need to exclude the buttons from themselves being bookmarked
-  # setBookmarkExclude(c("bookmark1", "bookmark2"))
-  # 
-  # # Trigger bookmarking with either button
-  # observeEvent(input$bookmark1, {
-  #   session$doBookmark()
-  # })
-  # observeEvent(input$bookmark2, {
-  #   session$doBookmark()
-  # })
-  # 
-  # js_click_line <- JS("function(event) {Shiny.onInputChange('line_clicked', [event.point.category]);}")
-  # 
-  # observeEvent(input$reset_button, {
-  #   reset("form")
-  # })
-  # 
-  # id <- NULL
-  # 
-  # observeEvent(input$reset_button, {
-  #   id <<- showNotification(
-  #     paste("Filters are Reset"),
-  #     duration = 5,
-  #     type = "message"
-  #   )
-  # })
-  # 
-  #------------------------------------------------------------
   # Date input
-  date_filter <- eventReactive(input$date, {
-    input$date
+  output$date <- renderUI({
+    sliderInput("date",
+                "Date",
+                min = min(province_daily$date),
+                max = max(province_daily$date),
+                value = max(province_daily$date),
+                timeFormat="%b %Y")
   })
   
-  # Case input
-  case_choose <- eventReactive(input$cases, {
-    case_when(input$cases == "New Cases" ~ "new_case",
-              input$cases == "New Deaths" ~  "new_death",
-              input$cases == "Total Cases" ~ "total_case",
-              input$cases == "Total Deaths" ~  "total_death"
-    )
-  })
-  # Province data render into map
-  df <- eventReactive(input$timeline, {
+  # Initial value storage
+  X <- reactiveValues(
+    case_choose = "total_case",
+    date = max(province_daily$date),
+    df = province_daily %>%
+      filter(date <= max(province_daily$date)) %>%
+      filter(date == max(date)) %>%
+      # We filter date because if user choose weekly or monthly and date is not match Sunday or month end,
+      # app will shift report on Sunday for weekly and month end for monthly
+      select(date, new_case, new_death, total_case, total_death, ADM1_EN),
+    df_country = thai_daily,
+    
+    bins1 =  c(0, 1e4, 2e4, 5e4, 1e5, 2e5, Inf)
+    
+  )
+  
+  observeEvent(input$button1, {
+    # update case select
+    X$case_choose <- case_when(input$cases == "New Cases" ~ "new_case",
+                               input$cases == "New Deaths" ~  "new_death",
+                               input$cases == "Total Cases" ~ "total_case",
+                               input$cases == "Total Deaths" ~  "total_death")
+    
+    # update data select
+    df <- NULL
     if (input$timeline == "Daily"){
       df <-province_daily
     }else if (input$timeline == "Weekly"){
@@ -158,49 +163,46 @@ server <- function(input, output, session) {
     }else if (input$timeline == "Monthly"){
       df <-province_monthly
     }
-    df %>%
-      filter(date <= date_filter()) %>%
+    X$df <- df %>%
+      filter(date <= input$date) %>%
       filter(date == max(date)) %>%
       # We filter date because if user choose weekly or monthly and date is not match Sunday or month end,
       # app will shift report on Sunday for weekly and month end for monthly
-      select(date, new_case, new_death, total_case, total_death, ADM1_EN)
+      select(date, new_case, new_death, total_case, total_death, ADM1_EN) 
     
-  })
-  
-  # Country data 
-  df_country <- eventReactive(input$timeline, {
+    # update data select
     if (input$timeline == "Daily"){
-      df_country <- thai_daily
+      X$df_country <- thai_daily
     }else if (input$timeline == "Weekly"){
-      df_country <- thai_weekly
+      X$df_country <- thai_weekly
     }else if (input$timeline == "Monthly"){
-      df_country <- thai_monthly
+      X$df_country <- thai_monthly
     } 
-    df_country
-  })
-  
-  # Color pallete
-  pallete <- reactive({
-    bins1 <- case_when(
-      case_choose() == "new_case" ~ c(0, 50, 100, 500, 1000, 2000, Inf),
-      case_choose() == "new_death" ~ c(0, 10, 30, 50, 100, 200, Inf),
-      case_choose() == "total_case" ~ c(0, 1e4, 2e4, 5e4, 1e5, 2e5, Inf),
-      case_choose() == "total_death" ~ c(0, 1e3, 2e2, 3e3, 4e3, 5e3, Inf)
+    
+    # update color 
+    X$bins1 <- case_when(
+      X$case_choose == "new_case" ~ c(0, 50, 100, 500, 1000, 2000, Inf),
+      X$case_choose == "new_death" ~ c(0, 10, 30, 50, 100, 200, Inf),
+      X$case_choose == "total_case" ~ c(0, 1e4, 2e4, 5e4, 1e5, 2e5, Inf),
+      X$case_choose == "total_death" ~ c(0, 1e3, 2e2, 3e3, 4e3, 5e3, Inf)
     )
     
+  })
+  
+  pallete <- reactive({
     colorBin(palette = "YlOrRd",
-             domain = df() %>%
-               select(matches(case_choose())),
-             bins = bins1, na.color = "green")
+             domain = X$df %>%
+               select(matches(X$case_choose)),
+             bins = X$bins1, na.color = "green")
   })
   
   # Value Boxes 1-4
   output$count1 <- renderValueBox({
-    value <- df() %>%
+    value <- X$df %>%
       select(matches("new_case")) %>%
       pull() %>% sum()
     vbox_render(value,
-                df_country(),
+                X$df_country,
                 label = "new_case" ,
                 chart_type = "area",
                 subtitle = paste0(input$timeline, " Report"),
@@ -211,11 +213,11 @@ server <- function(input, output, session) {
   })
   
   output$count2 <- renderValueBox({
-    value <- df() %>%
+    value <- X$df %>%
       select(matches("new_death")) %>%
       pull() %>% sum()
     vbox_render(value,
-                df_country(),
+                X$df_country,
                 label = "new_death" ,
                 chart_type = "area",
                 subtitle = paste0(input$timeline, " Report"),
@@ -226,11 +228,11 @@ server <- function(input, output, session) {
   })
   
   output$count3 <- renderValueBox({
-    value <- df() %>%
+    value <- X$df %>%
       select(matches("total_case")) %>%
       pull() %>% sum()
     vbox_render(value,
-                df_country(),
+                X$df_country,
                 label = "total_case" ,
                 chart_type = "line",
                 subtitle = paste0(input$timeline, " Report"),
@@ -241,11 +243,11 @@ server <- function(input, output, session) {
   })
   
   output$count4 <- renderValueBox({
-    value <- df() %>%
+    value <- X$df %>%
       select(matches("total_death")) %>%
       pull() %>% sum()
     vbox_render(value,
-                df_country(),
+                X$df_country,
                 label = "total_death" ,
                 chart_type = "line",
                 subtitle = paste0(input$timeline, " Report"),
@@ -254,25 +256,6 @@ server <- function(input, output, session) {
                 color = "red"
     )
   })
-  ## skip 
-  # Plot graph
-  # output$plot_xxx <- renderPlotly({
-  #   
-  #   # function for thai pandemic plot
-  #   df_country() %>%
-  #     filter(date <= date_filter()) %>%
-  #     as_data_frame() %>%
-  #     ggplot(aes(x = date, y = !!rlang::sym(case_choose()),
-  #     ), show.legend = FALSE)+
-  #     geom_line(color = "orange")+
-  #     geom_point(size = .5, color = "#823a14", alpha = 0.5)+
-  #     labs(tittle = 'Scale in Log Scale',
-  #          subtitle  = paste0("source: ", "https://covid19.ddc.moph.go.th/"),
-  #          x = "Date", y = str_to_title(case_choose()))+
-  #     theme_bw()+
-  #     scale_y_continuous(trans = "log10")
-  #   
-  # })
   
   # Plot map
   #Initial Map --> I set default = daily & total cases, you can change at ui "render_thai" input setting
@@ -282,7 +265,7 @@ server <- function(input, output, session) {
     #More leaflet detail from document https://rstudio.github.io/leaflet/
     #Merge map and data and pass to render in leaflet
     thai_st <- thai %>%
-      left_join(df(), by = "ADM1_EN")
+      left_join(X$df, by = "ADM1_EN")
     
     thai_st %>%
       leaflet() %>%
@@ -293,11 +276,11 @@ server <- function(input, output, session) {
       setView(lng = 100.5018, lat = 13.7563 ,zoom = 5)%>% #set at Bangkok coordinate
       addLegend("bottomright", title = paste0(input$cases, " |||"),
                 pal = pal,
-                values = ~df() %>%
-                  select(matches(case_choose())) %>%
+                values = ~X$df %>%
+                  select(matches(X$case_choose)) %>%
                   pull())%>%
       addPolygons(fillColor = ~pal(thai_st %>%
-                                     select(matches(case_choose())) %>%
+                                     select(matches(X$case_choose)) %>%
                                      st_drop_geometry() %>%
                                      pull()),
                   weight = 2,
@@ -320,7 +303,7 @@ server <- function(input, output, session) {
     
     
   })
-
+  
   ##Render world pandemic map
   output$render_world <- renderLeaflet({
     data = world_daily %>%
@@ -360,7 +343,7 @@ server <- function(input, output, session) {
       summarise(across(where(is.numeric), sum), .groups = "drop") %>% 
       set_names(c("date", "total_case", "new_case", "total_death", "new_death"))
   })
-
+  
   output$world1 <- renderValueBox({
     value <- dt() %>% 
       filter(date == max(date)) %>% 
@@ -369,7 +352,7 @@ server <- function(input, output, session) {
     vbox_render(value,
                 dt(),
                 "new_case",
-                chart_type = "line",
+                chart_type = "area",
                 subtitle = "World Daily Report",
                 info = "|||",
                 icon = icon("plane"),
@@ -401,7 +384,7 @@ server <- function(input, output, session) {
     vbox_render(value,
                 dt(),
                 "new_death",
-                chart_type = "line",
+                chart_type = "area",
                 subtitle = "World Daily Report",
                 info = "|||",
                 icon = icon("plane"),
@@ -442,6 +425,26 @@ server <- function(input, output, session) {
   #          ylab = paste0(input$rb, "/", "in weekly scale"))+
   #     theme_bw()
   #   # scale_y_continuous(trans = "log10")
+  #   
+  # })
+  
+  ## skip 
+  # Plot graph
+  # output$plot_xxx <- renderPlotly({
+  #   
+  #   # function for thai pandemic plot
+  #   df_country() %>%
+  #     filter(date <= date_filter()) %>%
+  #     as_data_frame() %>%
+  #     ggplot(aes(x = date, y = !!rlang::sym(case_choose()),
+  #     ), show.legend = FALSE)+
+  #     geom_line(color = "orange")+
+  #     geom_point(size = .5, color = "#823a14", alpha = 0.5)+
+  #     labs(tittle = 'Scale in Log Scale',
+  #          subtitle  = paste0("source: ", "https://covid19.ddc.moph.go.th/"),
+  #          x = "Date", y = str_to_title(case_choose()))+
+  #     theme_bw()+
+  #     scale_y_continuous(trans = "log10")
   #   
   # })
   

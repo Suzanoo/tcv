@@ -1,9 +1,3 @@
-###The ui cannot see all the variables in the server, they have other ways to communicate.
-###We reload necessary variable
-province_daily <-readr::read_csv("data/province_daily.csv")
-min_date <- min(province_daily$date)
-max_date <- max(province_daily$date)
-
 ui <- dashboardPage(
   dashboardHeader(title = 'Covid-19 Pandemic'),
   dashboardSidebar(
@@ -17,27 +11,32 @@ ui <- dashboardPage(
                   column(12, offset = 2.5,
                          conditionalPanel(
                            "input.sidebarmenu === 'cso'",
-                            # a. FILTERS
-                            useShinyjs(),
-                            div(id = "form",
-                                tags$hr(),
-                                selectInput("timeline", "Timeline",
-                                            choices = list("Daily", "Weekly", "Monthly"),
-                                            bookmarkButton(id = "bookmark1")),
-                                selectInput("cases", "Cases",
-                                            choices = list( "Total Cases", "Total Deaths", "New Cases", "New Deaths"),
-                                            bookmarkButton(id = "bookmark2")),
-                                sliderInput("date", label = h3("Date"), min = min_date,
-                                            max = max_date, value = max_date),
-                                # div(id = "control", style = "opacity: 0.95; z-index: 10;",
-                                #     plotlyOutput("plot_xxx", height="250px", width="100%"),
-                                #     h6('Source:'),
-                                #     h6('Thailand Department of Disease Control:'),
-                                #     h6('https://covid19.ddc.moph.go.th')
-                                # )
-                            )
-                          )
+                           # a. FILTERS
+                           useShinyjs(),
+                           div(id = "form",
+                               tags$hr(),
+                               selectInput("timeline", "Timeline",
+                                           choices = list("Daily", "Weekly", "Monthly"),
+                                           bookmarkButton(id = "bookmark1")),
+                               selectInput("cases", "Cases",
+                                           choices = list( "Total Cases", "Total Deaths", "New Cases", "New Deaths"),
+                                           bookmarkButton(id = "bookmark2")),
+                               uiOutput(outputId = 'date'),
+                               actionButton("button1", "Render", icon = icon("redo")),
+                               hr()
+                               
+                               # sliderInput("date", label = h3("Date"), min = min_date,
+                               #             max = max_date, value = max_date)
+                               # div(id = "control", style = "opacity: 0.95; z-index: 10;",
+                               #     plotlyOutput("plot_xxx", height="250px", width="100%"),
+                               #     h6('Source:'),
+                               #     h6('Thailand Department of Disease Control:'),
+                               #     h6('https://covid19.ddc.moph.go.th')
+                               # )
+                           )
+                         )
                   )
+                  
                 )
     )
   ),
@@ -68,7 +67,7 @@ ui <- dashboardPage(
               ),
               h5("Source from Johns Hopkins repo: https://github.com/CSSEGISandData/COVID-19"),
               h5("©2022 highwaynumber12@gmail.com")
-          
+              
               ## skip
               # fluidRow(offset = 2.5,
               #   column(12, offset = 2.5, style = "opacity: 0.75; z-index: 10;",
@@ -115,13 +114,13 @@ ui <- dashboardPage(
               #                 plotlyOutput("plot_xxx", height="250px", width="100%"),
               #          )
               # ),
-
+              
               h5("Source: Thailand Department of Disease Control: https://covid19.ddc.moph.go.th/"),
               h5("©2022 highwaynumber12@gmail.com")
       )
     )
   )
   # bs4DashFooter(
-
+  
   # )
 )
